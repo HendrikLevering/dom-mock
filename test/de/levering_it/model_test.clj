@@ -8,7 +8,8 @@
             [clojure.edn :as edn]
             [clojure.string :as string]
             [clojure.pprint]
-            [griffin.test.contract :as c]))
+            [griffin.test.contract :as c]
+            [clojure.test.check :as tc]))
 
 (defmacro cljs-eval2!
   "evals form in cljs repl (cljs-eval! (+ 1 1))"
@@ -42,7 +43,7 @@
   (str "dtz & rjf ")
 
   (enable-cljs-eval!)
-  (cljs-eval! (+ 2 1))
+  (cljs-eval! (+ 3 1))
   ; => "you & me")
 
 
@@ -55,42 +56,50 @@
     (cljs-eval! (require '[griffin.test.contract :as c]))
     (cljs-eval! (require '[clojure.test.check :as tc])))
 
-  (cljs-eval2! (def e-under-test (.createElement js/document "div")))
-  (cljs-eval2! (.setAttribute e-under-test "id" "foo"))
 
-  (cljs-eval2! (let [e (.createElement js/document "div")]
-                 (.getEventListeners e)))
   (cljs-eval2! (.-activeElement js/document))
   (cljs-eval2!
    (let [e (.getElementById js/document "dom-root")
          e2 (.createElement js/document "div")
-         e22 (.createElement js/document "div")
-         a (atom 0)]
+         a (atom 0)
+         f (fn [e] (println "f") (swap! a inc))
+         f2 (fn [e] (println "f") (swap! a inc))]
      (.appendChild e e2)
-     (.addEventListener e2 "click" (fn [e] (swap! a inc)))
-     (.appendChild e2 e22)
-     (.addEventListener e22 "click" (fn [e] (swap! a inc)
-                                      (.stopPropagation e)))
-     e2))
+     (.removeChild e e2 "foo")
+     #_(.addEventListener e2 "click" f (clj->js {}))
+
+     #_(.removeEventListener e2 "click" f (clj->js {}))
+     #_(.click e2)
+     #_@a))
 
   (cljs-eval2!
-   (let [m  #_((impl/dom-impl "dom-root")) (c/mock model/model)
-         a (atom nil)]
-     #_(protocols/create-element m nil "div" 0)
-     #_(protocols/createComment m "foo")
-     (protocols/createTextNode m "bar")
+   (let [m  (c/test-proxy model/model  ((impl/dom-impl "dom-root")))
+         #_(c/mock model/model)
+         #_((impl/dom-impl "dom-root"))
+         h1 (fn [e] (println e))
+         h (constantly 500)]
+     (protocols/create-element m  nil "div" 1)
      (protocols/appendChild m -1 0)
-     #_(protocols/appendChild m -1 1)
-     (protocols/children m 0)
-
-     #_(protocols/add-event-listener m 0 "click" (constantly nil) {})
+     (protocols/add-event-listener m -1 "click" h {})
+     #_(protocols/add-event-listener m 0 "click" h {})
+     #_(protocols/remove-event-listener m -1 "click" h {})
      #_(protocols/add-event-listener m -1 "click" (constantly nil) {})
-     #_(protocols/click m 0)
-     #_(protocols/remove-event-listener m -1 0 "click" {})
-     ))
+     (protocols/click m 0)
 
-  (cljs-eval!  (tc/quick-check 100 (c/test-model model/model)))
-  (let [r (cljs-eval2! (tc/quick-check 100 (c/verify model/model (impl/dom-impl "dom-root"))))]
+     #_(protocols/createComment m "foo")
+     #_(protocols/createTextNode m "bar")
+     #_(protocols/appendChild m -1 0)
+     #_(protocols/appendChild m -1 1)
+     #_(protocols/children m 0)
+     #_(protocols/remove-event-listener m -1 0 "click" {})))
+(cljs-eval2! (tc/quick-check 100 (c/verify model/model (impl/dom-impl "dom-root") :num-calls 100)))
+  (type (first (keys (cleaned-val (cljs-eval2!  (tc/quick-check 100 (c/test-model model/model :num-calls 100)))))))
+  (cljs-eval!
+   (try
+     (tc/quick-check 100 (c/verify model/model (impl/dom-impl "dom-root") :num-calls 100))
+     (catch js/Error e
+       (ex-data e))))
+  (let [r (cljs-eval2! (tc/quick-check 100 (c/verify model/model (impl/dom-impl "dom-root") :num-calls 100)))]
     (def res r)
     (-> res
         cleaned-val
@@ -111,11 +120,15 @@
 
   (cljs-eval! (require '[griffin.test.contract :as c]))
   (cljs-eval! (require '[clojure.test.check :as tc]))
-  (testing "testing test-model model"
-    (let [r (cljs-eval! (tc/quick-check 100 (c/test-model model/model)))]
+  (testing "testing test-model model in clj"
+    (let [r (tc/quick-check 100 (c/test-model model/model :num-calls 100))]
       (is (:pass? r) r)
       (is (= (:pass? r) true))))
+  (testing "testing test-model model in cljs"
+    (let [r  (cleaned-val (cljs-eval2!  (tc/quick-check 100 (c/test-model model/model :num-calls 100))))]
+      (is (r 'pass?) r)
+      (is (= (r 'pass?) true))))
   (testing "verify model with real browser dom"
-    (let [r (cljs-eval! (tc/quick-check 100 (c/verify model/model (impl/dom-impl "dom-root"))))]
-      (is (:pass? r) r)
-      (is (= (:pass? r) true)))))
+    (let [r (cleaned-val (cljs-eval2! (tc/quick-check 1000 (c/verify model/model (impl/dom-impl "dom-root") :num-calls 100))))]
+      (is (r 'pass?) (with-out-str (clojure.pprint/pprint r)))
+      (is (= (r 'pass?) true)))))

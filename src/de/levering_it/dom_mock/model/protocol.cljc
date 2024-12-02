@@ -6,9 +6,9 @@
 (defprotocol Document
   :extend-via-metadata true
   ;; document api
-  (create-element [this ns tag mp])
-  (createComment [this s])
-  (createTextNode [this s])
+  (create-element [this ix ns tag mp])
+  (createComment [this ix s])
+  (createTextNode [this ix s])
   (activeElement [this])
   ;; Node Api
   (appendChild [this parent child])

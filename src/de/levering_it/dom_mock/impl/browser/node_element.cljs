@@ -9,20 +9,16 @@
   p-element/Element
 
   (append-child [this new-child]
-    (.appendChild node (:node new-child))
-    new-child)
+    (.appendChild node (:node new-child)))
 
   (insert-before [this new-child ref-child]
-    (.insertBefore node (:node new-child) (:node ref-child))
-    new-child)
+    (.insertBefore node (:node new-child) (:node ref-child)))
 
   (remove-child [this old-child]
-    (.removeChild node (:node old-child))
-    old-child)
+    (.removeChild node (:node old-child)))
 
   (replace-child [this new-child old-child]
-    (.replaceChild node (:node new-child) (:node old-child))
-    new-child)
+    (.replaceChild node (:node new-child) (:node old-child)))
 
   (get-child-nodes [this]
     (vec (map #(NodeElementWrapper. %) (.-childNodes node))))
@@ -65,10 +61,10 @@
   ;; event target
 
   (add-event-listener [this type listener options]
-    (.addEventListener node type listener (clj->js options)))
+                      (.addEventListener node type listener (clj->js options)))
 
   (remove-event-listener [this type listener options]
-    (.removeEventListener node type listener (clj->js options)))
+                         (.removeEventListener node type listener (clj->js options)))
 
 
   p-helper/TestUtils

@@ -2,7 +2,7 @@
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
         org.clojure/clojurescript {:mvn/version "1.11.54"}
         org.clojure/spec.alpha {:mvn/version "0.5.238"}
-        io.github.HendrikLevering/test.contract {:git/sha "3e961e6ab6a418b1385d1debb9944a342f9c6bf6"}
+        io.github.HendrikLevering/test.contract {:git/sha "f745a457d7d2d88b2bc7fb3653a886c4da739b9d"}
         io.github.HendrikLevering/cljs-eval {:git/sha "41f590db2130642c9b9916e05417f4814e2937f1"}}
  :aliases
  {:test
